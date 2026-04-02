@@ -5,19 +5,21 @@
 ### Requisitos
 - Python 3.8+
 - ffmpeg instalado y disponible en PATH
-- requests
 
 ### Instalación de dependencias
 ```bash
-pip install requests
+pip install requests python-dotenv
 ```
 
 ### Configuración de API key (AudD)
-Define la variable de entorno `AUDD_API_TOKEN`:
-- **PowerShell**: `$env:AUDD_API_TOKEN="tu_token"`
-- **CMD**: `set AUDD_API_TOKEN=tu_token`
+Creá un archivo `.env` en la raíz del proyecto con tu token:
+```
+AUDD_API_TOKEN=tu_token
+```
+Podés obtener tu token en [audd.io](https://dashboard.audd.io/).
 
 ### Uso
 ```bash
+
 python main.py ruta/del/video.mp4
 ```

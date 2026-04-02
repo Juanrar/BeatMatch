@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Reconocimiento musical desde un video (consola).
 
@@ -26,11 +26,36 @@ import sys
 import tempfile
 
 import requests
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+def _buscar_ffmpeg() -> str:
+    """Busca ffmpeg en PATH y en ubicaciones comunes de WinGet."""
+    import shutil
+    import glob
+
+    found = shutil.which("ffmpeg")
+    if found:
+        return found
+
+    # Buscar en instalaciones de WinGet
+    winget_pattern = os.path.join(
+        os.environ.get("LOCALAPPDATA", ""),
+        "Microsoft", "WinGet", "Packages", "Gyan.FFmpeg*", "**", "ffmpeg.exe",
+    )
+    matches = glob.glob(winget_pattern, recursive=True)
+    if matches:
+        return matches[0]
+
+    return "ffmpeg"
 
 
 def extraer_audio(video_path: str, audio_path: str) -> None:
+    ffmpeg_bin = _buscar_ffmpeg()
     cmd = [
-        "ffmpeg",
+        ffmpeg_bin,
         "-y",
         "-i",
         video_path,
