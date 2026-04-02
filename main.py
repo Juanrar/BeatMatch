@@ -1,131 +1,41 @@
 #!/usr/bin/env python3
 """
-Reconocimiento musical desde un video (consola).
+BeatMatch — Reconocimiento musical y composición de video sincronizado.
+
+Reconoce la canción que suena en un video, descarga el audio completo
+desde YouTube, y genera un nuevo MP4 con el video original y la canción
+sincronizada.
 
 Requisitos:
-- Python 3.8+
+- Python 3.10+
 - ffmpeg instalado y disponible en PATH
-- requests
+- Token de AudD en archivo .env
 
-Instalacion de dependencias:
-- pip install requests
-
-Configuracion de API key (AudD):
-- Define la variable de entorno AUDD_API_TOKEN
-  - PowerShell: $env:AUDD_API_TOKEN="tu_token"
-  - CMD: set AUDD_API_TOKEN=tu_token
+Instalación:
+    pip install -r requirements.txt
 
 Uso:
-- python main.py ruta/del/video.mp4
+    python main.py ruta/del/video.mp4
 """
 
-import json
 import os
-import subprocess
 import sys
 import tempfile
 
-import requests
 from dotenv import load_dotenv
+
+from audio_extractor import extract_audio
+from song_recognizer import recognize_song
+from song_downloader import download_song
+from video_composer import compose_video
 
 load_dotenv()
 
 
-def _buscar_ffmpeg() -> str:
-    """Busca ffmpeg en PATH y en ubicaciones comunes de WinGet."""
-    import shutil
-    import glob
-
-    found = shutil.which("ffmpeg")
-    if found:
-        return found
-
-    # Buscar en instalaciones de WinGet
-    winget_pattern = os.path.join(
-        os.environ.get("LOCALAPPDATA", ""),
-        "Microsoft", "WinGet", "Packages", "Gyan.FFmpeg*", "**", "ffmpeg.exe",
-    )
-    matches = glob.glob(winget_pattern, recursive=True)
-    if matches:
-        return matches[0]
-
-    return "ffmpeg"
-
-
-def extraer_audio(video_path: str, audio_path: str) -> None:
-    ffmpeg_bin = _buscar_ffmpeg()
-    cmd = [
-        ffmpeg_bin,
-        "-y",
-        "-i",
-        video_path,
-        "-vn",
-        "-ac",
-        "1",
-        "-ar",
-        "44100",
-        "-t",
-        "20",
-        audio_path,
-    ]
-
-    try:
-        completed = subprocess.run(
-            cmd,
-            check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-    except FileNotFoundError:
-        raise RuntimeError("ffmpeg no esta instalado o no esta en PATH")
-    except subprocess.CalledProcessError as exc:
-        stderr = (exc.stderr or "").strip()
-        raise RuntimeError(f"Error en ffmpeg: {stderr}")
-
-    if completed.returncode != 0:
-        raise RuntimeError("Error desconocido en ffmpeg")
-
-
-def reconocer_cancion(audio_path: str, token: str) -> dict:
-    url = "https://api.audd.io/"
-
-    try:
-        with open(audio_path, "rb") as audio_file:
-            response = requests.post(
-                url,
-                data={"api_token": token},
-                files={"file": audio_file},
-                timeout=60,
-            )
-        response.raise_for_status()
-    except requests.RequestException as exc:
-        raise RuntimeError(f"Error consultando API de reconocimiento: {exc}")
-
-    try:
-        payload = response.json()
-    except json.JSONDecodeError:
-        raise RuntimeError("La API devolvio una respuesta invalida")
-
-    result = payload.get("result")
-    if not result:
-        raise LookupError("Cancion no reconocida")
-
-    return result
-
-
-def formatear_tiempo(timecode: str) -> str:
-    if not timecode:
-        return "No disponible"
-
-    partes = timecode.split(":")
-    if len(partes) == 2:
-        minutos, segundos = partes
-        return f"{minutos}:{segundos}"
-    if len(partes) == 3:
-        _, minutos, segundos = partes
-        return f"{minutos}:{segundos}"
-    return timecode
+def _build_output_path(video_path: str) -> str:
+    """Genera el nombre del archivo de salida: video_beatmatch.mp4."""
+    base, ext = os.path.splitext(video_path)
+    return f"{base}_beatmatch{ext}"
 
 
 def main() -> int:
@@ -146,19 +56,26 @@ def main() -> int:
 
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
-            audio_path = os.path.join(tmpdir, "audio.wav")
-            extraer_audio(video_path, audio_path)
-            result = reconocer_cancion(audio_path, token)
+            # 1. Extraer audio y reconocer canción
+            print("Extrayendo audio del video...")
+            audio_sample = extract_audio(video_path, tmpdir)
 
-        song = result.get("title") or "Desconocido"
-        artist = result.get("artist") or "Desconocido"
-        confidence = result.get("score") or result.get("confidence") or "No disponible"
-        timecode = formatear_tiempo(result.get("timecode") or "")
+            print("Reconociendo canción...")
+            match = recognize_song(audio_sample, token)
 
-        print(f"Cancion: {song}")
-        print(f"Artista: {artist}")
-        print(f"Confianza: {confidence}")
-        print(f"Minuto del tema: {timecode}")
+            print(f"Canción: {match.artist} - {match.title}")
+            print(f"Álbum: {match.album}")
+            print(f"Timecode: {match.timecode_raw} ({match.timecode_seconds}s)")
+
+            # 2. Descargar canción completa desde YouTube
+            song_path = download_song(match.artist, match.title, tmpdir)
+            print("Descarga completada.")
+
+            # 3. Componer video con audio sincronizado
+            output_path = _build_output_path(video_path)
+            compose_video(video_path, song_path, match.timecode_seconds, output_path)
+
+        print(f"Video generado: {output_path}")
         return 0
 
     except LookupError as exc:
