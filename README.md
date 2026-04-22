@@ -1,45 +1,53 @@
 # BeatMatch
 
-## Reconocimiento y Sincronización de un video (consola)
+BeatMatch es una herramienta para el reconocimiento musical y la composición de videos sincronizados. Permite identificar la canción que suena en un video, descargar el audio completo desde YouTube y generar un nuevo archivo MP4 con el video original y la canción sincronizada.
 
-Herramienta potente que sincroniza el audio de un video corto con el track musical final en alta calidad. Admite modo Automático (mediante reconocimiento de AudD) y modos Manuales apoyados en procesamiento avanzado de señales y matemáticas por correlación cruzada y FFT.
+## Requisitos
 
-### Requisitos
 - Python 3.10+
 - ffmpeg instalado y disponible en PATH
+- Archivo `.env` con las siguientes variables:
+  - `AUDD_API_TOKEN`: Token de la API de AudD
+  - `ACR_ACCESS_KEY`: Clave de acceso para ACRCloud
+  - `ACR_ACCESS_SECRET`: Secreto de acceso para ACRCloud
+  - `ACR_REQURL`: URL del endpoint de ACRCloud
 
-### Instalación de dependencias
-```bash
-pip install -r requirements.txt
-```
+## Instalación
 
-### Configuración de API key
-Si vas a usar el reconocimiento automático (por defecto), debes usar tu API Token de AudD. Creá un archivo `.env` en la raíz del proyecto con tu token:
-```
-AUDD_API_TOKEN=tu_token
-```
-Podés obtener tu token en [audd.io](https://dashboard.audd.io/).
+1. Clona este repositorio:
+   ```bash
+   git clone <URL_DEL_REPOSITORIO>
+   ```
+2. Instala las dependencias:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Asegúrate de tener `ffmpeg` instalado y configurado en tu PATH.
 
----
+## Uso
 
-### MODO DE USO
+Ejecuta el script principal con uno de los siguientes comandos:
 
-**1. Modo Automático (Usa AudD):**
-Reconoce la canción y sincroniza de acuerdo al timecode provisto por la API.
+### Reconocimiento automático
 ```bash
 python main.py ruta/del/video.mp4
 ```
 
-**2. Modo Manual de Búsqueda (Sin AudD, utiliza Correlación FFT):**
-Evita el reconocimiento. Podes pasar el artista y canción exactos como texto, nosotros la descargamos y encontramos el desfasaje internamente.
+### Especificar una canción manualmente
 ```bash
-python main.py ruta/del/video.mp4 --query "Artista - Tema"
+python main.py ruta/del/video.mp4 --query "Artista - Canción"
 ```
 
-**3. Modo Manual Local (Audio provisto, utiliza Correlación FFT):**
-Ni siquiera necesitamos internet. Podes brindarle localmente ambos clips y armará la sincronización exacta.
+### Usar un archivo de audio local
 ```bash
-python main.py ruta/del/video.mp4 --audio "ruta/de/la/cancion.mp3"
+python main.py ruta/del/video.mp4 --audio "ruta/a/cancion.mp3"
 ```
 
-La app generará finalmente en el directorio del video un archivo optimizado llamado `video_beatmatch.mp4`.
+## Notas
+
+- Asegúrate de que el archivo de video sea válido y no esté corrupto.
+- Si encuentras problemas con `ffmpeg`, verifica que esté correctamente instalado y configurado.
+
+## Licencia
+
+BeatMatch es un proyecto de código abierto bajo la licencia MIT.
