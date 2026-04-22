@@ -90,8 +90,8 @@ def main() -> int:
                 print("Extrayendo audio del video para AudD...")
                 audio_sample = extract_audio(video_path, tmpdir)
 
-                print("Reconociendo canción...")
-                match = recognize_song(audio_sample, token)
+                # Llamar a recognize_song con solo el argumento de audio
+                match = recognize_song(audio_sample)
                 print(f"Canción: {match.artist} - {match.title}")
                 print(f"Álbum: {match.album}")
                 print(f"Timecode AudD: {match.timecode_raw} ({match.timecode_seconds}s)")
